@@ -183,7 +183,7 @@ export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welc
                     throw new Error(`Could not fetch the required data file from ${staticFileUrl}. Make sure the file exists in the /assets directory.`);
                 }
                 const blob = await response.blob();
-                const fileNameFromUrl = staticFileUrl.split('/').pop() || 'data';
+                const fileNameFromUrl = decodeURIComponent(staticFileUrl.split('/').pop() || 'data');
                 const file = new File([blob], fileNameFromUrl, { type: blob.type });
                 await processAndSetData(file);
             } catch (err) {

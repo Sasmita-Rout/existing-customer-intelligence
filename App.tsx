@@ -9,20 +9,12 @@ type Tab = 'Customer Intelligence Info' | 'RMG' | 'Recruitment' | 'Account Data'
 const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>('Customer Intelligence Info');
 
-    const renderTabContent = () => {
-        switch (activeTab) {
-            case 'Customer Intelligence Info':
-                return <AccountInfoTab />;
-            case 'RMG':
-                return <RmgTab />;
-            case 'Recruitment':
-                return <RecruitmentTab />;
-            case 'Account Data':
-                return <AccountDataTab />;
-            default:
-                return <AccountInfoTab />;
-        }
-    };
+    const tabs: { name: Tab; component: React.ReactNode }[] = [
+        { name: 'Customer Intelligence Info', component: <AccountInfoTab /> },
+        { name: 'RMG', component: <RmgTab /> },
+        { name: 'Recruitment', component: <RecruitmentTab /> },
+        { name: 'Account Data', component: <AccountDataTab /> },
+    ];
 
     return (
         <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8">
@@ -53,7 +45,11 @@ const App: React.FC = () => {
             </header>
             
             <main className="flex-grow">
-                {renderTabContent()}
+                {tabs.map(({ name, component }) => (
+                    <div key={name} style={{ display: activeTab === name ? 'block' : 'none' }}>
+                        {component}
+                    </div>
+                ))}
             </main>
 
             <footer className="py-8 mt-12 border-t border-slate-200">
