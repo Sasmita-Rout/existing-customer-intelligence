@@ -80,9 +80,10 @@ interface ChatbotProps {
     dataDescription: string;
     title: string;
     welcomeMessage: string;
+    suggestedQuestions?: string[];
 }
 
-export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, title, welcomeMessage }) => {
+export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, title, welcomeMessage, suggestedQuestions }) => {
     const [messages, setMessages] = useState<Message[]>([{ text: welcomeMessage, sender: 'bot' }]);
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -94,24 +95,30 @@ export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, t
 
     useEffect(scrollToBottom, [messages]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmedInput = userInput.trim();
-        if (!trimmedInput || isLoading) return;
+    const handleQuestionSubmit = async (question: string) => {
+        if (isLoading) return;
 
-        const newMessages: Message[] = [...messages, { text: trimmedInput, sender: 'user' }];
+        const newMessages: Message[] = [...messages, { text: question, sender: 'user' }];
         setMessages(newMessages);
         setUserInput('');
         setIsLoading(true);
 
         try {
-            const botResponse = await generateChatResponseFromData(trimmedInput, dataSource, dataDescription);
+            const botResponse = await generateChatResponseFromData(question, dataSource, dataDescription);
             setMessages([...newMessages, { text: botResponse, sender: 'bot' }]);
         } catch (error) {
             console.error("Chatbot error:", error);
             setMessages([...newMessages, { text: 'Sorry, I encountered an error.', sender: 'bot' }]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedInput = userInput.trim();
+        if (trimmedInput) {
+            handleQuestionSubmit(trimmedInput);
         }
     };
 
@@ -149,6 +156,22 @@ export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, t
             </div>
 
             <footer className="p-4 border-t border-slate-200">
+                {suggestedQuestions && messages.length <= 1 && (
+                    <div className="mb-4 text-center">
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {suggestedQuestions.map((q, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleQuestionSubmit(q)}
+                                    disabled={isLoading}
+                                    className="px-3 py-1.5 text-sm text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {q}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit}>
                     <div className="flex items-center space-x-2">
                         <input

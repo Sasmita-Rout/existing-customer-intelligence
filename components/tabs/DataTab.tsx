@@ -1,7 +1,6 @@
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { generateShortSummaryFromData } from '../../services/geminiService';
 import { Chatbot } from '../Chatbot';
 import { SpinnerIcon, UploadCloudIcon, DocumentTextIcon, OneDriveIcon } from '../icons';
 
@@ -11,6 +10,7 @@ interface DataTabProps {
     welcomeMessage: string;
     icon: React.ElementType;
     staticFileUrl?: string;
+    suggestedQuestions?: string[];
 }
 
 const DataUploader: React.FC<{ 
@@ -100,18 +100,15 @@ const loadingMessages = [
     'Loading required data file...',
     'Analyzing file structure...',
     'Extracting key data points...',
-    'Identifying patterns and trends...',
-    'Generating initial insights...',
-    'Finalizing summary...'
+    'Preparing chatbot...',
+    'Finalizing interface...'
 ];
 
-export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welcomeMessage, icon: Icon, staticFileUrl }) => {
+export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welcomeMessage, icon: Icon, staticFileUrl, suggestedQuestions }) => {
     const ONEDRIVE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
     const isStatic = !!staticFileUrl;
 
     const [data, setData] = useState<any[] | null>(null);
-    const [fileName, setFileName] = useState<string>('');
-    const [summary, setSummary] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(isStatic);
     const [error, setError] = useState<string | null>(null);
     const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
@@ -133,9 +130,7 @@ export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welc
     const processAndSetData = useCallback(async (file: File) => {
         setIsLoading(true);
         setError(null);
-        setSummary(null);
         setData(null);
-        setFileName(file.name);
 
         try {
             if (file.size > 2 * 1024 * 1024) {
@@ -161,16 +156,14 @@ export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welc
                 throw new Error("The uploaded file is empty, not a valid JSON array, or could not be parsed correctly.");
             }
 
-            const summaryResponse = await generateShortSummaryFromData(jsonData, dataDescription);
             setData(jsonData);
-            setSummary(summaryResponse);
         } catch (err) {
             console.error("File processing error:", err);
             setError(err instanceof Error ? err.message : "An error occurred while processing the file.");
         } finally {
             setIsLoading(false);
         }
-    }, [dataDescription]);
+    }, []);
     
     useEffect(() => {
         const loadStaticFile = async () => {
@@ -239,50 +232,39 @@ export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welc
     };
 
     const handleReset = () => {
-        setData(null); setSummary(null); setError(null); setFileName('');
+        setData(null); setError(null);
     };
-
+    
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center text-center h-full min-h-[400px] bg-white rounded-xl shadow-md border border-slate-200">
                 <SpinnerIcon className="animate-spin h-12 w-12 text-indigo-600 mb-4" />
-                <p className="text-lg font-semibold text-slate-700">{fileName ? `Analyzing: ${fileName}`: 'Loading data...'}</p>
+                <p className="text-lg font-semibold text-slate-700">Processing data...</p>
                 <p className="text-sm text-slate-500 mt-2 transition-opacity duration-500">{loadingMessage}</p>
             </div>
         );
     }
     
-    if (data && summary) {
+    if (data) {
          return (
-            <div className="space-y-8">
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                         <h2 className="text-xl font-semibold text-slate-800 flex items-center">
-                            <DocumentTextIcon className="h-6 w-6 mr-3 text-indigo-600" />
-                            AI-Generated Summary for {fileName}
-                        </h2>
-                        {!isStatic && (
-                             <button 
-                                onClick={handleReset}
-                                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                            >
-                                Upload New File
-                            </button>
-                        )}
+            <div className="space-y-6">
+                 {!isStatic && (
+                    <div className="flex justify-end">
+                        <button 
+                            onClick={handleReset}
+                            className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                        >
+                            Upload New File
+                        </button>
                     </div>
-                     <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
-                        <p className="text-slate-600 leading-relaxed">{summary}</p>
-                    </div>
-                </div>
-
-                <div className="pt-8">
-                     <Chatbot 
-                        dataSource={data}
-                        dataDescription={dataDescription}
-                        title={`${tabName} Data Chatbot`}
-                        welcomeMessage={welcomeMessage}
-                     />
-                </div>
+                )}
+                 <Chatbot 
+                    dataSource={data}
+                    dataDescription={dataDescription}
+                    title={`${tabName} Data Chatbot`}
+                    welcomeMessage={welcomeMessage}
+                    suggestedQuestions={suggestedQuestions}
+                 />
             </div>
         );
     }

@@ -254,7 +254,11 @@ export const generateShortSummaryFromData = async (data: unknown[], dataDescript
             model: 'gemini-2.5-flash',
             contents: prompt,
         }));
-        return response.text.trim();
+        const text = response.text;
+        if (typeof text === 'string') {
+            return text.trim();
+        }
+        throw new Error("AI response did not contain valid text for summary.");
     } catch (error) {
         console.error("Error generating short summary:", error);
         return "Could not generate a summary for the provided data.";
@@ -284,7 +288,11 @@ export const generateChatResponseFromData = async (question: string, data: unkno
             model: 'gemini-2.5-flash',
             contents: prompt,
         }));
-        return response.text.trim();
+        const text = response.text;
+        if (typeof text === 'string') {
+            return text.trim();
+        }
+        throw new Error("AI response did not contain valid text for chat.");
     } catch (error) {
         console.error("Error generating chat response:", error);
         return "I'm sorry, I encountered an error while trying to process your request.";
