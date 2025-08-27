@@ -32,310 +32,213 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
             }
             
             if (i < retries - 1) {
-                const backoffDelay = (isRateLimitError ? delay * 2 : delay) * Math.pow(2, i) + Math.floor(Math.random() * 1000);
-                console.log(`API call failed (retriable). Attempt ${i + 1} of ${retries}. Retrying in ${backoffDelay}ms...`);
-                await new Promise(res => setTimeout(res, backoffDelay));
+                const backoffDelay = (isRateLimitError ? delay * Math.pow(2, i) : delay) + Math.random() * 1000;
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
             }
         }
     }
-    console.error("API call failed after all retries.", lastError);
-    throw lastError!;
+    throw lastError;
 };
 
-const cleanupText = (text: string): string => {
-    if (!text) return '';
-    // This regex removes citation markers like [3], [14], or [3, 14]
-    return text.replace(/\[\d+(,\s*\d+)*\]/g, ' ').replace(/\s+/g, ' ').trim();
-};
-
-export const generateCompanyFacts = async (companyName: string): Promise<string[]> => {
-    try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `Provide 7 interesting and little-known "Did you know?" style facts about ${companyName}. The facts should be concise, engaging, and suitable for a professional audience.`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        facts: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.STRING
-                            }
-                        }
-                    }
-                }
+const digestSchema = {
+    type: Type.OBJECT,
+    properties: {
+        overview: { type: Type.STRING, description: "A concise overview of the company's current situation, focusing on recent performance, market position, and key strategic initiatives. Should be a single paragraph." },
+        keyHighlights: { type: Type.ARRAY, items: { type: Type.STRING }, description: "2-3 bullet points highlighting the most critical recent developments, such as major product launches, significant financial results, or strategic partnerships." },
+        keyFinancials: { 
+            type: Type.ARRAY, 
+            items: { 
+                type: Type.OBJECT, 
+                properties: {
+                    metric: { type: Type.STRING, description: "The name of the financial metric (e.g., 'Market Cap', 'P/E Ratio', 'YOY Revenue Growth', 'Net Profit Margin')." },
+                    value: { type: Type.STRING, description: "The value of the metric, formatted as a string (e.g., '$1.2 Trillion', '25.5', '15.2%', '12.1%')." }
+                },
+                required: ["metric", "value"]
             },
-        }));
-        const jsonText = response.text;
-        const parsed = JSON.parse(jsonText);
-        return parsed.facts || [];
-    } catch (error) {
-        console.error(`Failed to generate facts for ${companyName}:`, error);
-        // Return empty array on failure to not block the main digest generation
-        return [];
-    }
+            description: "A list of 3-4 key financial metrics."
+        },
+        revenueGrowth: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    period: { type: Type.STRING, description: "The financial period (e.g., '2025 Q1', '2025 Q2 (Est.)')." },
+                    revenue: { type: Type.NUMBER, description: "The revenue in billions of USD." }
+                },
+                required: ["period", "revenue"]
+            },
+            description: "An array of the last 2-3 reported or estimated quarterly revenue figures."
+        },
+        quarterlyReleases: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key takeaways from the most recent quarterly earnings reports." },
+        newsAndPressReleases: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Summaries of significant news and press releases from the last 3 months." },
+        newJoiners: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of new executive hires (CXO, VP level) in the last 3 months, formatted as 'Name, Title'." },
+        techFocus: { type: Type.STRING, description: "A detailed paragraph on the company's primary technology focus, including key technologies, platforms, and innovations." },
+        techDistribution: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    tech: { type: Type.STRING, description: "The technology category." },
+                    percentage: { type: Type.NUMBER, description: "The estimated percentage of focus on this technology." }
+                },
+                required: ["tech", "percentage"]
+            },
+            description: "An estimated breakdown of the company's technology focus by percentage."
+        },
+        strategicAndHiringInsights: { type: Type.STRING, description: "Analysis of the company's strategic direction and its implications on hiring trends. Should be a single paragraph." },
+        openPositions: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING }, link: { type: Type.STRING }, source: { type: Type.STRING }, datePosted: { type: Type.STRING, description: "Format as YYYY-MM-DD" }, region: { type: Type.STRING }
+                },
+                required: ["title", "link", "source", "datePosted", "region"]
+            },
+            description: "A diverse list of 5-10 currently open positions with job titles, regions, and direct links to the job postings."
+        },
+        attentionPointsForAccionlabs: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Actionable insights and potential opportunities for Accionlabs based on the company's strategy, tech focus, and needs." }
+    },
+     required: [
+        "overview", "keyHighlights", "keyFinancials", "revenueGrowth", "quarterlyReleases", 
+        "newsAndPressReleases", "newJoiners", "techFocus", "techDistribution", 
+        "strategicAndHiringInsights", "openPositions", "attentionPointsForAccionlabs"
+    ]
 };
 
 export const generateCompanyDigest = async (companyName: string): Promise<DigestData> => {
-    const model = 'gemini-2.5-flash';
-
     const prompt = `
-CRITICAL REQUIREMENT: All information retrieved for this digest MUST be from the last 3 months. Do not include any data, news, or reports older than this period.
+        Generate a comprehensive, data-driven intelligence digest for the company: "${companyName}".
+        Act as a senior business analyst. Your audience is a tech services company looking for partnership and sales opportunities.
+        
+        CRITICAL INSTRUCTIONS:
+        1.  ALL information retrieved must be from the last 3 months ONLY. Disregard any data, news, or reports older than that.
+        2.  The output MUST be a single, valid JSON object that strictly adheres to the provided schema. Do not include any text, conversation, or markdown formatting before or after the JSON object.
+        3.  For any section where recent (last 3 months) data is truly unavailable, return an empty array [] for list-based fields or an empty string "" for text fields. Do not invent data.
+        4.  For the 'openPositions' section, find at least 5 real, currently open positions and provide direct links to the job postings.
+    `;
 
-Analyze recent news, financial reports, and market data for "${companyName}".
-For 'newJoiners' and 'openPositions', you MUST consult sources like LinkedIn, Glassdoor, Indeed, Naukri, Monster, Dice, CareerBuilder, ZipRecruiter, TechCrunch, Nasscom, Comparably, other business journals, and official company career pages. For 'openPositions', capture a diverse set of global regions where available.
-
-Generate a detailed corporate digest targeted at Accionlabs, a software service company looking for partnership or sales opportunities. It is crucial that you find and include data for all sections if publicly available. If a section's data is truly unavailable, return an empty array [] for list-based fields or an empty string "" for text fields, but you must exhaust all search capabilities first.
-
-You MUST return your response as a single, valid JSON object. Do not include any text before or after the JSON. Do not use markdown backticks.
-
-The JSON object must have the following structure:
-{
-  "overview": "A 1-paragraph summary of recent news, market performance, and general activities.",
-  "keyHighlights": [
-    "A list of exactly 2 of the most important recent highlights. Each highlight should be a concise string."
-  ],
-  "keyFinancials": [
-    { "metric": "Market Cap", "value": "e.g., $2.1T" },
-    { "metric": "P/E Ratio", "value": "e.g., 30.5" },
-    { "metric": "YOY Revenue Growth", "value": "e.g., 15.2%" },
-    { "metric": "Net Profit Margin", "value": "e.g., 25.1%" }
-  ],
-  "revenueGrowth": [
-      { "period": "YYYY QX", "revenue": 50.5 },
-      { "period": "YYYY QX", "revenue": 52.1 },
-      { "period": "YYYY QX", "revenue": 55.3 }
-  ],
-  "quarterlyReleases": [
-      "A bullet point summarizing a key takeaway from the most recent quarterly earnings release.",
-      "Another significant finding or figure from a recent quarterly report."
-  ],
-  "newsAndPressReleases": [
-      "A summary of a significant recent press release or major news story.",
-      "Details of another important news item or announcement."
-  ],
-  "newJoiners": [
-      "Full Name - New Role (e.g., CFO, VP of Engineering).",
-      "Another significant new hire at the CXO or VP level."
-  ],
-  "techFocus": "A paragraph about the key technologies the company is currently focusing on or developing. This should complement the techDistribution data.",
-  "techDistribution": [
-      { "tech": "Primary Technology Area", "percentage": 40 },
-      { "tech": "Secondary Technology Area", "percentage": 30 },
-      { "tech": "Other", "percentage": 30 }
-  ],
-  "strategicAndHiringInsights": "A paragraph describing the company's future strategic direction and overall hiring trends, based on public statements and market analysis.",
-  "openPositions": [
-      { "title": "Senior Frontend Engineer", "link": "https://careers.example.com/job/123", "source": "LinkedIn", "datePosted": "YYYY-MM-DD", "region": "USA" },
-      { "title": "Data Scientist", "link": "https://careers.example.com/job/456", "source": "Company Website", "datePosted": "YYYY-MM-DD", "region": "Remote" }
-  ],
-  "attentionPointsForAccionlabs": [
-    "A bullet point identifying a potential opportunity for Accionlabs.",
-    "Another bullet point highlighting a potential synergy with Accionlabs' services.",
-    "A specific, actionable angle on how to pitch Accionlabs' services to solve a problem for this company.",
-    "Another point of interest for Accionlabs based on the company's trajectory.",
-    "A fifth actionable insight or recommendation for Accionlabs."
-  ]
-}
-`;
-    
     try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: model,
+        const result = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
             contents: prompt,
             config: {
+                responseMimeType: "application/json",
+                responseSchema: digestSchema,
                 tools: [{ googleSearch: {} }],
             },
         }));
 
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-        const sources: Source[] = groundingChunks
-            .map(chunk => chunk.web)
-            .filter((web): web is { uri: string; title: string; } => !!web && !!web.uri && !!web.title)
-            .reduce((acc, current) => {
-                if (!acc.some(item => item.uri === current.uri)) {
-                    acc.push(current);
-                }
-                return acc;
-            }, [] as Source[]);
+        const rawText = result.text;
         
-        const jsonText = response.text;
-        let parsedData;
-
-        try {
-            const startIndex = jsonText.indexOf('{');
-            const lastIndex = jsonText.lastIndexOf('}');
-
-            if (startIndex === -1 || lastIndex === -1 || lastIndex < startIndex) {
-                console.error("No valid JSON object found in AI response:", jsonText);
-                throw new Error("Could not find a valid JSON object in the AI's response.");
-            }
-
-            const jsonString = jsonText.substring(startIndex, lastIndex + 1);
-            parsedData = JSON.parse(jsonString);
-        } catch (parseError) {
-            console.error("Failed to parse JSON response from AI:", jsonText, parseError);
-            throw new Error(`Failed to generate digest for ${companyName}. The AI returned malformed data.`);
+        // Resilient JSON parsing
+        const jsonStart = rawText.indexOf('{');
+        const jsonEnd = rawText.lastIndexOf('}');
+        if (jsonStart === -1 || jsonEnd === -1) {
+            console.error("Malformed AI response:", rawText);
+            throw new Error("Failed to find a valid JSON object in the AI's response.");
         }
-        
-        const safeParsedData = {
-            overview: '',
-            keyHighlights: [],
-            keyFinancials: [],
-            revenueGrowth: [],
-            quarterlyReleases: [],
-            newsAndPressReleases: [],
-            newJoiners: [],
-            techFocus: '',
-            techDistribution: [],
-            strategicAndHiringInsights: '',
-            openPositions: [],
-            attentionPointsForAccionlabs: [],
-            ...parsedData
-        };
+        const jsonString = rawText.substring(jsonStart, jsonEnd + 1);
 
-        safeParsedData.overview = cleanupText(safeParsedData.overview);
-        safeParsedData.techFocus = cleanupText(safeParsedData.techFocus);
-        safeParsedData.strategicAndHiringInsights = cleanupText(safeParsedData.strategicAndHiringInsights);
-        safeParsedData.keyHighlights = safeParsedData.keyHighlights.map(cleanupText);
-        safeParsedData.quarterlyReleases = safeParsedData.quarterlyReleases.map(cleanupText);
-        safeParsedData.newsAndPressReleases = safeParsedData.newsAndPressReleases.map(cleanupText);
-        safeParsedData.newJoiners = safeParsedData.newJoiners.map(cleanupText);
-        safeParsedData.attentionPointsForAccionlabs = safeParsedData.attentionPointsForAccionlabs.map(cleanupText);
-        
-        safeParsedData.openPositions = Array.isArray(safeParsedData.openPositions)
-            ? safeParsedData.openPositions.map((pos: Partial<OpenPosition>) => ({
-                  title: cleanupText(pos.title || ''),
-                  link: pos.link || '',
-                  source: cleanupText(pos.source || ''),
-                  datePosted: cleanupText(pos.datePosted || ''),
-                  region: cleanupText(pos.region || 'N/A'),
-              }))
-            : [];
+        let parsedData: Omit<DigestData, 'id' | 'companyName' | 'sources'>;
+        try {
+            parsedData = JSON.parse(jsonString);
+        } catch(e) {
+            console.error("Failed to parse JSON response from AI:", rawText);
+            throw new Error(`Failed to parse JSON response from AI: ${rawText}`);
+        }
+
+        const groundingChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+        const sources: Source[] = groundingChunks
+            .map((chunk: any) => ({
+                uri: chunk.web?.uri ?? '',
+                title: chunk.web?.title ?? 'Untitled Source'
+            }))
+            .filter(source => source.uri);
+
+        const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
 
         return {
-            id: `${companyName.replace(/\s+/g, '-')}-${Date.now()}`,
-            companyName,
-            overview: safeParsedData.overview,
-            keyHighlights: safeParsedData.keyHighlights.filter(Boolean),
-            keyFinancials: safeParsedData.keyFinancials.filter((d: FinancialMetric) => d && typeof d.metric === 'string' && typeof d.value === 'string'),
-            revenueGrowth: safeParsedData.revenueGrowth.filter((d: RevenueDataPoint) => d && typeof d.period === 'string' && typeof d.revenue === 'number'),
-            quarterlyReleases: safeParsedData.quarterlyReleases.filter(Boolean),
-            newsAndPressReleases: safeParsedData.newsAndPressReleases.filter(Boolean),
-            newJoiners: safeParsedData.newJoiners.filter(Boolean),
-            techFocus: safeParsedData.techFocus,
-            techDistribution: safeParsedData.techDistribution.filter((d: TechDistributionItem) => d && typeof d.tech === 'string' && typeof d.percentage === 'number'),
-            strategicAndHiringInsights: safeParsedData.strategicAndHiringInsights,
-            openPositions: safeParsedData.openPositions.filter((p: OpenPosition) => p && p.title && p.link),
-            attentionPointsForAccionlabs: safeParsedData.attentionPointsForAccionlabs.filter(Boolean),
-            sources,
+            ...parsedData,
+            id: `digest-${companyName.replace(/\s+/g, '_')}-${Date.now()}`,
+            companyName: companyName,
+            sources: uniqueSources,
         };
     } catch (error) {
         console.error(`Error generating digest for ${companyName}:`, error);
-        if (error instanceof Error) {
-            throw error;
-        }
-        throw new Error(`Failed to generate digest for ${companyName}. The API may be unavailable or the request may have been blocked.`);
+        throw new Error(`Failed to generate digest for ${companyName}. The AI returned malformed data.`);
     }
 };
 
-export const generateShortSummaryFromData = async (data: unknown[], dataDescription: string): Promise<string> => {
-    // Use a small sample of data for a quick summary
-    const dataSample = data.slice(0, 10);
-
-    const prompt = `
-        You are a data analyst. Your task is to provide a concise, factual summary of the provided data snippet, which represents ${dataDescription}.
-        The summary MUST be a single paragraph and strictly under 150 characters.
-        Do not add any conversational text or introductions like "This data shows...".
-        Focus only on key facts like total counts, main categories, or overall status.
-
-        Here is the data sample:
-        \`\`\`json
-        ${JSON.stringify(dataSample, null, 2)}
-        \`\`\`
-    `;
-
-     try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+export const generateCompanyFacts = async (companyName: string): Promise<string[]> => {
+    const prompt = `Generate 3-4 interesting, little-known "Did you know?" style facts about ${companyName}. Each fact should be on a new line.`;
+    try {
+        const result = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
             contents: prompt,
         }));
-        
-        try {
-            const text = response.text;
-            if (typeof text === 'string') {
-                return text.trim();
-            }
-        } catch (e) {
-            console.warn("Accessing response.text for summary failed, likely due to safety blocking.", e);
-        }
-
-        // If we couldn't get text, log it and return the default failure message.
-        const finishReason = response.candidates?.[0]?.finishReason;
-        if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
-            console.error(`Summary generation failed. Reason: ${finishReason}`, { fullResponse: response });
-        } else {
-            console.error("AI response did not contain valid text for summary.", { fullResponse: response });
-        }
-        
-        return "Could not generate a summary for the provided data.";
+        const text = result.text;
+        if (!text) return [];
+        return text.split('\n').map(fact => fact.replace(/^[*-]\s*/, '').trim()).filter(Boolean);
     } catch (error) {
-        console.error("Error generating short summary:", error);
-        return "Could not generate a summary for the provided data.";
+        console.error("Fact generation failed:", error);
+        return [`The AI is currently busy generating your main report for ${companyName}.`];
     }
-}
+};
 
 export const generateChatResponseFromData = async (question: string, data: unknown[], dataDescription: string): Promise<string> => {
+    let dataSample = data;
+    let isSampled = false;
+
+    // Limit data size to prevent overly large requests
+    if (data.length > 500) {
+        dataSample = data.slice(0, 500);
+        isSampled = true;
+    }
+
+    const dataString = JSON.stringify(dataSample, null, 2);
+
     const prompt = `
-        You are 'Accion Insights Bot', a helpful data analyst. Your ONLY task is to answer questions based on the JSON data provided about ${dataDescription}.
-        If the answer is not in the data, say: "I'm sorry, but I cannot answer that question based on the provided data."
+        You are a helpful AI assistant integrated into a data analysis chatbot.
+        Your task is to answer questions based ONLY on the structured data provided below. This data was extracted from a spreadsheet file.
+        The data is about: ${dataDescription}.
 
-        FORMATTING RULES:
-        - Use Markdown for all responses.
-        - Use headings (#, ##), bullets (*), and bold text (**text**).
-        - For lists of items, YOU MUST use a Markdown table.
-
-        DATA:
+        Here is the data, presented as an array of objects where each object represents a row from the original file:
         \`\`\`json
-        ${JSON.stringify(data, null, 2)}
+        ${dataString}
         \`\`\`
+        ${isSampled ? "Note: You are only seeing a sample of the first 500 rows of a larger dataset. Your answer should reflect this by stating you are working with a sample if relevant." : ""}
 
-        Question: "${question}"
+        Answer the following user question based strictly on the data provided above.
+        - The data represents rows from a spreadsheet. The keys in each JSON object are the column headers.
+        - If the answer is in the data, provide it clearly and concisely.
+        - If the data can be summarized in a table, format your response using Markdown tables.
+        - Do not make up information or answer questions that cannot be addressed by the data.
+        - If the question cannot be answered from the data, say "I cannot answer that question based on the provided data."
+
+        User Question: "${question}"
     `;
 
     try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+        const result = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
             contents: prompt,
         }));
         
-        try {
-            const text = response.text;
-            if (typeof text === 'string' && text.trim().length > 0) {
-                return text.trim();
+        const responseText = result.text;
+        
+        // Add a check for empty or blocked responses.
+        if (!responseText || responseText.trim() === '') {
+            const safetyRatings = result.candidates?.[0]?.safetyRatings;
+            if (safetyRatings && safetyRatings.some(rating => rating.blocked)) {
+                 throw new Error("The response was blocked for safety reasons. Please rephrase your question.");
             }
-             // If text is empty string, fall through to check for other reasons.
-        } catch (e) {
-            console.warn("Accessing response.text failed, likely due to safety blocking.", e);
-            // Fall through to check for finish reason and safety ratings
+            throw new Error("AI response did not contain valid text for chat.");
         }
-
-        // If we couldn't get text, provide a more detailed reason if possible.
-        const finishReason = response.candidates?.[0]?.finishReason;
-        if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
-            const reasonMessage = `I'm sorry, my response was blocked. Reason: ${finishReason}.`;
-            console.warn(reasonMessage, { fullResponse: response });
-            return reasonMessage;
-        }
-
-        // If we fall through here, it means the model returned an empty response for an unknown reason.
-        console.error("AI response was empty but not blocked for a clear reason.", { fullResponse: response });
-        return "I'm sorry, I received an empty response from the AI. Please try rephrasing your question.";
-
+        
+        return responseText;
     } catch (error) {
         console.error("Error generating chat response:", error);
-        return "I'm sorry, I encountered an error while trying to process your request.";
+        throw error; // Re-throw to be caught by the UI
     }
 };
