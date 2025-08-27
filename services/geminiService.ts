@@ -165,8 +165,16 @@ The JSON object must have the following structure:
         let parsedData;
 
         try {
-            const cleanedJsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-            parsedData = JSON.parse(cleanedJsonText);
+            const startIndex = jsonText.indexOf('{');
+            const lastIndex = jsonText.lastIndexOf('}');
+
+            if (startIndex === -1 || lastIndex === -1 || lastIndex < startIndex) {
+                console.error("No valid JSON object found in AI response:", jsonText);
+                throw new Error("Could not find a valid JSON object in the AI's response.");
+            }
+
+            const jsonString = jsonText.substring(startIndex, lastIndex + 1);
+            parsedData = JSON.parse(jsonString);
         } catch (parseError) {
             console.error("Failed to parse JSON response from AI:", jsonText, parseError);
             throw new Error(`Failed to generate digest for ${companyName}. The AI returned malformed data.`);
