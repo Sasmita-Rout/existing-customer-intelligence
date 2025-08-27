@@ -164,20 +164,24 @@ export const DigestCard = forwardRef<HTMLDivElement, DigestCardProps>(({ digest 
             </header>
 
             <div className="space-y-10">
-                <Section title="Overview">
-                    <p className="text-slate-600 leading-relaxed">{digest.overview || 'No overview available.'}</p>
-                </Section>
+                {digest.overview && (
+                    <Section title="Overview">
+                        <p className="text-slate-600 leading-relaxed">{digest.overview}</p>
+                    </Section>
+                )}
 
-                <Section title="Key Highlights">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                        {digest.keyHighlights && digest.keyHighlights.length > 0 ? digest.keyHighlights.map((highlight, index) => (
-                             <div key={index} className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex items-start">
-                                <span className="text-indigo-500 font-bold mr-3 mt-1">&#8227;</span>
-                                <p className="text-slate-700 flex-grow">{highlight}</p>
-                            </div>
-                        )) : <p className="text-sm text-slate-500 md:col-span-2">No key highlights available.</p>}
-                    </div>
-                </Section>
+                {digest.keyHighlights && digest.keyHighlights.length > 0 && (
+                    <Section title="Key Highlights">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            {digest.keyHighlights.map((highlight, index) => (
+                                 <div key={index} className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex items-start">
+                                    <span className="text-indigo-500 font-bold mr-3 mt-1">&#8227;</span>
+                                    <p className="text-slate-700 flex-grow">{highlight}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </Section>
+                )}
                 
                 {hasFinancials && (
                     <Section title="Financial Performance" icon={ChartBarIcon}>
@@ -225,72 +229,80 @@ export const DigestCard = forwardRef<HTMLDivElement, DigestCardProps>(({ digest 
                     </Section>
                 )}
                 
-                <Section title="News and Press Releases" icon={NewsIcon}>
-                    <BulletList items={digest.newsAndPressReleases} />
-                </Section>
+                {digest.newsAndPressReleases && digest.newsAndPressReleases.length > 0 && (
+                    <Section title="News and Press Releases" icon={NewsIcon}>
+                        <BulletList items={digest.newsAndPressReleases} />
+                    </Section>
+                )}
 
-                <Section title="New Joiners (CXO, VP)" icon={UsersIcon}>
-                    <BulletList items={digest.newJoiners} />
-                </Section>
+                {digest.newJoiners && digest.newJoiners.length > 0 && (
+                    <Section title="New Joiners (CXO, VP)" icon={UsersIcon}>
+                        <BulletList items={digest.newJoiners} />
+                    </Section>
+                )}
                 
-                <Section title="Technology in Focus">
-                     <div className="grid md:grid-cols-5 gap-8 items-start mt-4">
-                        <div className="md:col-span-3">
-                            <p className="text-slate-600 leading-relaxed mb-4">{digest.techFocus || 'No information available.'}</p>
-                        </div>
-                        <div className="md:col-span-2">
-                           <h4 className="text-md font-semibold text-slate-700 mb-3">Tech Distribution</h4>
-                           {digest.techDistribution && digest.techDistribution.length > 0 ? (
-                                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                                    <table className="min-w-full divide-y divide-slate-200">
-                                        <thead className="bg-slate-50">
-                                            <tr>
-                                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Technology</th>
-                                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Focus</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-slate-200">
-                                            {digest.techDistribution.map((item, index) => (
-                                                <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">{item.tech}</td>
-                                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{`${item.percentage}%`}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                           ) : <p className="text-sm text-slate-500">No distribution data available.</p>}
-                        </div>
-                     </div>
-                </Section>
-
-                <Section title="Strategic & Hiring Insights" icon={TrendingUpIcon}>
-                    <p className="text-slate-600 leading-relaxed">{digest.strategicAndHiringInsights || 'No information available.'}</p>
-                </Section>
-                
-                <Section title="Open Positions" icon={BriefcaseIcon}>
-                     {digest.openPositions && digest.openPositions.length > 0 ? (
-                        <>
-                            {regionSummary && (
-                                <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-600">
-                                    <span className="font-semibold text-slate-700">Positions by Region: </span> {regionSummary}
+                {(digest.techFocus || (digest.techDistribution && digest.techDistribution.length > 0)) && (
+                    <Section title="Technology in Focus">
+                         <div className="grid md:grid-cols-5 gap-8 items-start mt-4">
+                            {digest.techFocus && (
+                                <div className={(digest.techDistribution && digest.techDistribution.length > 0) ? "md:col-span-3" : "md:col-span-5"}>
+                                    <p className="text-slate-600 leading-relaxed mb-4">{digest.techFocus}</p>
                                 </div>
                             )}
-                            <SortableTable 
-                                columns={openPositionsColumns} 
-                                data={digest.openPositions} 
-                            />
-                        </>
-                    ) : (
-                        <p className="text-sm text-slate-500">No open positions found.</p>
-                    )}
-                </Section>
+                            {digest.techDistribution && digest.techDistribution.length > 0 && (
+                                <div className={digest.techFocus ? "md:col-span-2" : "md:col-span-5"}>
+                                   <h4 className="text-md font-semibold text-slate-700 mb-3">Tech Distribution</h4>
+                                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                        <table className="min-w-full divide-y divide-slate-200">
+                                            <thead className="bg-slate-50">
+                                                <tr>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Technology</th>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Focus</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-slate-200">
+                                                {digest.techDistribution.map((item, index) => (
+                                                    <tr key={index} className="hover:bg-slate-50">
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">{item.tech}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{`${item.percentage}%`}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                         </div>
+                    </Section>
+                )}
 
-                <Section title="Attention Points for Accionlabs" icon={TargetIcon}>
-                     <div className="bg-indigo-50 border-l-4 border-indigo-400 p-5 rounded-r-md">
-                        <BulletList items={digest.attentionPointsForAccionlabs} />
-                    </div>
-                </Section>
+                {digest.strategicAndHiringInsights && (
+                    <Section title="Strategic & Hiring Insights" icon={TrendingUpIcon}>
+                        <p className="text-slate-600 leading-relaxed">{digest.strategicAndHiringInsights}</p>
+                    </Section>
+                )}
+                
+                {digest.openPositions && digest.openPositions.length > 0 && (
+                    <Section title="Open Positions" icon={BriefcaseIcon}>
+                        {regionSummary && (
+                            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-600">
+                                <span className="font-semibold text-slate-700">Positions by Region: </span> {regionSummary}
+                            </div>
+                        )}
+                        <SortableTable 
+                            columns={openPositionsColumns} 
+                            data={digest.openPositions} 
+                        />
+                    </Section>
+                )}
+
+                {digest.attentionPointsForAccionlabs && digest.attentionPointsForAccionlabs.length > 0 && (
+                    <Section title="Attention Points for Accionlabs" icon={TargetIcon}>
+                         <div className="bg-indigo-50 border-l-4 border-indigo-400 p-5 rounded-r-md">
+                            <BulletList items={digest.attentionPointsForAccionlabs} />
+                        </div>
+                    </Section>
+                )}
 
             </div>
 

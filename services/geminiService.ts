@@ -254,11 +254,25 @@ export const generateShortSummaryFromData = async (data: unknown[], dataDescript
             model: 'gemini-2.5-flash',
             contents: prompt,
         }));
-        const text = response.text;
-        if (typeof text === 'string') {
-            return text.trim();
+        
+        try {
+            const text = response.text;
+            if (typeof text === 'string') {
+                return text.trim();
+            }
+        } catch (e) {
+            console.warn("Accessing response.text for summary failed, likely due to safety blocking.", e);
         }
-        throw new Error("AI response did not contain valid text for summary.");
+
+        // If we couldn't get text, log it and return the default failure message.
+        const finishReason = response.candidates?.[0]?.finishReason;
+        if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
+            console.error(`Summary generation failed. Reason: ${finishReason}`, { fullResponse: response });
+        } else {
+            console.error("AI response did not contain valid text for summary.", { fullResponse: response });
+        }
+        
+        return "Could not generate a summary for the provided data.";
     } catch (error) {
         console.error("Error generating short summary:", error);
         return "Could not generate a summary for the provided data.";
@@ -288,11 +302,30 @@ export const generateChatResponseFromData = async (question: string, data: unkno
             model: 'gemini-2.5-flash',
             contents: prompt,
         }));
-        const text = response.text;
-        if (typeof text === 'string') {
-            return text.trim();
+        
+        try {
+            const text = response.text;
+            if (typeof text === 'string' && text.trim().length > 0) {
+                return text.trim();
+            }
+             // If text is empty string, fall through to check for other reasons.
+        } catch (e) {
+            console.warn("Accessing response.text failed, likely due to safety blocking.", e);
+            // Fall through to check for finish reason and safety ratings
         }
-        throw new Error("AI response did not contain valid text for chat.");
+
+        // If we couldn't get text, provide a more detailed reason if possible.
+        const finishReason = response.candidates?.[0]?.finishReason;
+        if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
+            const reasonMessage = `I'm sorry, my response was blocked. Reason: ${finishReason}.`;
+            console.warn(reasonMessage, { fullResponse: response });
+            return reasonMessage;
+        }
+
+        // If we fall through here, it means the model returned an empty response for an unknown reason.
+        console.error("AI response was empty but not blocked for a clear reason.", { fullResponse: response });
+        return "I'm sorry, I received an empty response from the AI. Please try rephrasing your question.";
+
     } catch (error) {
         console.error("Error generating chat response:", error);
         return "I'm sorry, I encountered an error while trying to process your request.";

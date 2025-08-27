@@ -82,7 +82,8 @@ export const AccountInfoTab: React.FC = () => {
                 pdf.save(`digest-${digest.companyName.replace(/\s+/g, '-')}.pdf`);
             } else { // 'view'
                 const url = pdf.output('bloburl');
-                setPdfUrl(url);
+                // FIX: `pdf.output('bloburl')` returns a URL object. It is converted to a string here to match the state's type.
+                setPdfUrl(url.toString());
             }
         } catch (err) {
             console.error("PDF Generation Error:", err);

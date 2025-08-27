@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { generateChatResponseFromData } from '../services/geminiService';
 import { ChatBubbleLeftRightIcon, SpinnerIcon } from './icons';
@@ -131,19 +132,26 @@ export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, t
             
             <div className="flex-grow p-4 overflow-y-auto bg-slate-50">
                 <div className="space-y-4">
-                    {messages.map((msg, index) => (
-                        <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-lg rounded-xl ${msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-800'}`}>
-                                {msg.sender === 'bot' ? (
-                                    <div className="prose prose-sm max-w-none p-3 prose-headings:text-slate-800 prose-strong:text-slate-800">
-                                        <MarkdownRenderer content={msg.text} />
-                                    </div>
-                                ) : (
-                                    <p className="text-sm p-3" style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>
-                                )}
+                    {messages.map((msg, index) => {
+                        const isBotMessage = msg.sender === 'bot';
+                        // Heuristic to detect a markdown table: looks for a header and separator line.
+                        const hasTable = isBotMessage && /^\|.+\|\r?\n\|[ -:]+\|/m.test(msg.text);
+                        const bubbleMaxWidthClass = hasTable ? 'max-w-full w-full' : 'max-w-lg';
+
+                        return (
+                            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`${bubbleMaxWidthClass} rounded-xl ${msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                                    {isBotMessage ? (
+                                        <div className="prose prose-sm max-w-none p-3 prose-headings:text-slate-800 prose-strong:text-slate-800">
+                                            <MarkdownRenderer content={msg.text} />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm p-3" style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {isLoading && (
                         <div className="flex justify-start">
                             <div className="max-w-lg px-4 py-2 rounded-xl bg-slate-200 text-slate-800 flex items-center">
