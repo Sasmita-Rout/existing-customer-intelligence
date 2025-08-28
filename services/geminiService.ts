@@ -40,72 +40,6 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
     throw lastError;
 };
 
-const digestSchema = {
-    type: Type.OBJECT,
-    properties: {
-        overview: { type: Type.STRING, description: "A concise overview of the company's current situation, focusing on recent performance, market position, and key strategic initiatives. Should be a single paragraph." },
-        keyHighlights: { type: Type.ARRAY, items: { type: Type.STRING }, description: "2-3 bullet points highlighting the most critical recent developments, such as major product launches, significant financial results, or strategic partnerships." },
-        keyFinancials: { 
-            type: Type.ARRAY, 
-            items: { 
-                type: Type.OBJECT, 
-                properties: {
-                    metric: { type: Type.STRING, description: "The name of the financial metric (e.g., 'Market Cap', 'P/E Ratio', 'YOY Revenue Growth', 'Net Profit Margin')." },
-                    value: { type: Type.STRING, description: "The value of the metric, formatted as a string (e.g., '$1.2 Trillion', '25.5', '15.2%', '12.1%')." }
-                },
-                required: ["metric", "value"]
-            },
-            description: "A list of 3-4 key financial metrics."
-        },
-        revenueGrowth: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    period: { type: Type.STRING, description: "The financial period (e.g., '2025 Q1', '2025 Q2 (Est.)')." },
-                    revenue: { type: Type.NUMBER, description: "The revenue in billions of USD." }
-                },
-                required: ["period", "revenue"]
-            },
-            description: "An array of the last 2-3 reported or estimated quarterly revenue figures."
-        },
-        quarterlyReleases: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key takeaways from the most recent quarterly earnings reports." },
-        newsAndPressReleases: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Summaries of significant news and press releases from the last 3 months." },
-        newJoiners: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of new executive hires (CXO, VP level) in the last 3 months, formatted as 'Name, Title'." },
-        techFocus: { type: Type.STRING, description: "A detailed paragraph on the company's primary technology focus, including key technologies, platforms, and innovations." },
-        techDistribution: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    tech: { type: Type.STRING, description: "The technology category." },
-                    percentage: { type: Type.NUMBER, description: "The estimated percentage of focus on this technology." }
-                },
-                required: ["tech", "percentage"]
-            },
-            description: "An estimated breakdown of the company's technology focus by percentage."
-        },
-        strategicAndHiringInsights: { type: Type.STRING, description: "Analysis of the company's strategic direction and its implications on hiring trends. Should be a single paragraph." },
-        openPositions: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    title: { type: Type.STRING }, link: { type: Type.STRING }, source: { type: Type.STRING }, datePosted: { type: Type.STRING, description: "Format as YYYY-MM-DD" }, region: { type: Type.STRING }
-                },
-                required: ["title", "link", "source", "datePosted", "region"]
-            },
-            description: "A diverse list of 5-10 currently open positions with job titles, regions, and direct links to the job postings."
-        },
-        attentionPointsForAccionlabs: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Actionable insights and potential opportunities for Accionlabs based on the company's strategy, tech focus, and needs." }
-    },
-     required: [
-        "overview", "keyHighlights", "keyFinancials", "revenueGrowth", "quarterlyReleases", 
-        "newsAndPressReleases", "newJoiners", "techFocus", "techDistribution", 
-        "strategicAndHiringInsights", "openPositions", "attentionPointsForAccionlabs"
-    ]
-};
-
 export const generateCompanyDigest = async (companyName: string): Promise<DigestData> => {
     const prompt = `
         Generate a comprehensive, data-driven intelligence digest for the company: "${companyName}".
@@ -113,9 +47,48 @@ export const generateCompanyDigest = async (companyName: string): Promise<Digest
         
         CRITICAL INSTRUCTIONS:
         1.  ALL information retrieved must be from the last 3 months ONLY. Disregard any data, news, or reports older than that.
-        2.  The output MUST be a single, valid JSON object that strictly adheres to the provided schema. Do not include any text, conversation, or markdown formatting before or after the JSON object.
+        2.  The output MUST be a single, valid JSON object. Do not include any text, conversation, or markdown formatting (like \`\`\`json) before or after the JSON object.
         3.  For any section where recent (last 3 months) data is truly unavailable, return an empty array [] for list-based fields or an empty string "" for text fields. Do not invent data.
         4.  For the 'openPositions' section, find at least 5 real, currently open positions and provide direct links to the job postings.
+        5.  The JSON object must strictly adhere to the following structure and descriptions:
+
+        {
+            "overview": "string (A concise overview of the company's current situation, focusing on recent performance, market position, and key strategic initiatives. Should be a single paragraph.)",
+            "keyHighlights": ["string (2-3 bullet points highlighting the most critical recent developments, such as major product launches, significant financial results, or strategic partnerships.)"],
+            "keyFinancials": [
+                { 
+                    "metric": "string (The name of the financial metric, e.g., 'Market Cap', 'P/E Ratio', 'YOY Revenue Growth', 'Net Profit Margin').",
+                    "value": "string (The value of the metric, formatted as a string, e.g., '$1.2 Trillion', '25.5', '15.2%', '12.1%')."
+                }
+            ],
+            "revenueGrowth": [
+                {
+                    "period": "string (The financial period, e.g., '2025 Q1', '2025 Q2 (Est.)').",
+                    "revenue": "number (The revenue in billions of USD.)"
+                }
+            ],
+            "quarterlyReleases": ["string (Key takeaways from the most recent quarterly earnings reports.)"],
+            "newsAndPressReleases": ["string (Summaries of significant news and press releases from the last 3 months.)"],
+            "newJoiners": ["string (List of new executive hires (CXO, VP level) in the last 3 months, formatted as 'Name, Title'.)"],
+            "techFocus": "string (A detailed paragraph on the company's primary technology focus, including key technologies, platforms, and innovations.)",
+            "techDistribution": [
+                {
+                    "tech": "string (The technology category.)",
+                    "percentage": "number (The estimated percentage of focus on this technology.)"
+                }
+            ],
+            "strategicAndHiringInsights": "string (Analysis of the company's strategic direction and its implications on hiring trends. Should be a single paragraph.)",
+            "openPositions": [
+                {
+                    "title": "string",
+                    "link": "string",
+                    "source": "string",
+                    "datePosted": "string (Format as YYYY-MM-DD)",
+                    "region": "string"
+                }
+            ],
+            "attentionPointsForAccionlabs": ["string (Actionable insights and potential opportunities for Accionlabs based on the company's strategy, tech focus, and needs.)"]
+        }
     `;
 
     try {
@@ -123,8 +96,6 @@ export const generateCompanyDigest = async (companyName: string): Promise<Digest
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
-                responseSchema: digestSchema,
                 tools: [{ googleSearch: {} }],
             },
         }));
