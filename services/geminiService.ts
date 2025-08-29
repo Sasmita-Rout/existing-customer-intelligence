@@ -157,7 +157,7 @@ export const generateCompanyFacts = async (companyName: string): Promise<string[
     }
 };
 
-export const generateChatResponseFromData = async (question: string, data: unknown[], dataDescription: string): Promise<string> => {
+export const generateChatResponseFromData = async (question: string, data: unknown[], dataDescription: string, systemInstruction?: string): Promise<string> => {
     let dataSample = data;
     let isSampled = false;
 
@@ -169,23 +169,23 @@ export const generateChatResponseFromData = async (question: string, data: unkno
 
     const dataString = JSON.stringify(dataSample, null, 2);
 
-    const prompt = `
-        You are a helpful AI assistant integrated into a data analysis chatbot.
-        Your task is to answer questions based ONLY on the structured data provided below. This data was extracted from a spreadsheet file.
-        The data is about: ${dataDescription}.
+    const baseInstruction = systemInstruction || `You are a helpful AI assistant integrated into a data analysis chatbot. Your task is to answer questions based ONLY on the structured data provided below. This data was extracted from a spreadsheet file. The data is about: ${dataDescription}.`;
 
-        Here is the data, presented as an array of objects where each object represents a row from the original file:
+    const prompt = `
+        ${baseInstruction}
+
+        CRITICAL RULES:
+        1. Base your answer ONLY on the structured data provided below.
+        2. The data is an array of objects, where each object represents a row from the original file.
+        3. If the data can be summarized in a table, format your response using Markdown tables.
+        4. Do not invent information or answer questions that cannot be addressed by the data.
+        5. If the question cannot be answered from the data, say "I cannot answer that question based on the provided data."
+
+        DATA:
         \`\`\`json
         ${dataString}
         \`\`\`
         ${isSampled ? "Note: You are only seeing a sample of the first 500 rows of a larger dataset. Your answer should reflect this by stating you are working with a sample if relevant." : ""}
-
-        Answer the following user question based strictly on the data provided above.
-        - The data represents rows from a spreadsheet. The keys in each JSON object are the column headers.
-        - If the answer is in the data, provide it clearly and concisely.
-        - If the data can be summarized in a table, format your response using Markdown tables.
-        - Do not make up information or answer questions that cannot be addressed by the data.
-        - If the question cannot be answered from the data, say "I cannot answer that question based on the provided data."
 
         User Question: "${question}"
     `;

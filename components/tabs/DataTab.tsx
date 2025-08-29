@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Chatbot } from '../Chatbot';
@@ -11,6 +12,7 @@ interface DataTabProps {
     icon: React.ElementType;
     staticFileUrl?: string;
     suggestedQuestions?: string[];
+    systemInstruction?: string;
 }
 
 const DataUploader: React.FC<{ 
@@ -104,7 +106,7 @@ const loadingMessages = [
     'Finalizing interface...'
 ];
 
-export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welcomeMessage, icon: Icon, staticFileUrl, suggestedQuestions }) => {
+export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welcomeMessage, icon: Icon, staticFileUrl, suggestedQuestions, systemInstruction }) => {
     const ONEDRIVE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
     const isStatic = !!staticFileUrl;
 
@@ -264,6 +266,7 @@ export const DataTab: React.FC<DataTabProps> = ({ tabName, dataDescription, welc
                     title={`${tabName} Data Chatbot`}
                     welcomeMessage={welcomeMessage}
                     suggestedQuestions={suggestedQuestions}
+                    systemInstruction={systemInstruction}
                  />
             </div>
         );

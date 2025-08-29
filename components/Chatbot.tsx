@@ -82,9 +82,10 @@ interface ChatbotProps {
     title: string;
     welcomeMessage: string;
     suggestedQuestions?: string[];
+    systemInstruction?: string;
 }
 
-export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, title, welcomeMessage, suggestedQuestions }) => {
+export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, title, welcomeMessage, suggestedQuestions, systemInstruction }) => {
     const [messages, setMessages] = useState<Message[]>([{ text: welcomeMessage, sender: 'bot' }]);
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +106,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ dataSource, dataDescription, t
         setIsLoading(true);
 
         try {
-            const botResponse = await generateChatResponseFromData(question, dataSource, dataDescription);
+            const botResponse = await generateChatResponseFromData(question, dataSource, dataDescription, systemInstruction);
             setMessages([...newMessages, { text: botResponse, sender: 'bot' }]);
         } catch (error) {
             console.error("Chatbot error:", error);
