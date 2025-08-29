@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { DataTab } from './DataTab';
 import { UsersIcon } from '../icons';
@@ -29,7 +30,7 @@ Skill bracket: Use this to filter resources by their general skill category.
 
 Primary skills and Secondary skills: These are the most important columns for filtering based on technology. You must combine the skills from both of these columns to provide a complete list of resources for any given technology-related query.
 
-Bench state date: A critical column for calculating the duration a resource has been on the bench. Use this to respond to queries like, "Find people who have been on the bench for more than 2 months."
+Bench state date: A critical column for calculating the duration a resource has been on the bench. The date format for this column is consistently dd/mm/yyyy. If you encounter a 5-digit number, it represents an Excel serial date and must be converted to a dd/mm/yyyy date before calculation. You must calculate the bench age by finding the difference between this date and the current date (today). Use this logic to respond to queries like, "Find people who have been on the bench for more than 2 months."
 
 Previous project and Previous manager: Use these columns to provide context about a resource's history before they were benched.
 
