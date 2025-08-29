@@ -177,9 +177,8 @@ export const generateChatResponseFromData = async (question: string, data: unkno
         CRITICAL RULES:
         1. Base your answer ONLY on the structured data provided below.
         2. The data is an array of objects, where each object represents a row from the original file.
-        3. If the data can be summarized in a table, format your response using Markdown tables.
-        4. Do not invent information or answer questions that cannot be addressed by the data.
-        5. If the question cannot be answered from the data, say "I cannot answer that question based on the provided data."
+        3. Do not invent information or answer questions that cannot be addressed by the data.
+        4. If the question cannot be answered from the data, say "I cannot answer that question based on the provided data."
 
         DATA:
         \`\`\`json

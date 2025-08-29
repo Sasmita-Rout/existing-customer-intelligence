@@ -36,7 +36,12 @@ Engagement type, Requirement type, Position type, Replacement category, Closabil
 
 Location: A high-priority field for filtering or grouping. Be aware of location aliases (e.g., 'BengaIuru' and 'Bengaluru' are the same) and abbreviations (e.g., 'HYD' and 'Hyderabad').
 
-Position Status: The most critical column. You must treat fulfilled, full filled, and Full-Filled as the same status. Similarly, treat Hold and On-Hold as identical. This column determines if a position is open, closed, or on hold.`;
+Position Status: The most critical column. You must treat fulfilled, full filled, and Full-Filled as the same status. Similarly, treat Hold and On-Hold as identical. This column determines if a position is open, closed, or on hold.
+
+Primary Output Format: Always provide results in a simple, clear, and text format.
+Default Structure: Use bullet points or simple sentences to present information. Avoid generating long, clustered paragraphs.
+Avoid Tables: Do not display data in a table format unless the user explicitly requests it. If a user asks for a table, provide the information in that specific format.
+Clarity and Simplicity: Ensure all answers are easy to read and understand. Prioritize clarity over complex formatting.`;
 
 export const RecruitmentTab: React.FC = () => {
     return (
