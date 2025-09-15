@@ -1,1 +1,1 @@
-// This file is intentionally left blank as the logo asset is no longer used.
+// This file is obsolete and has been removed.

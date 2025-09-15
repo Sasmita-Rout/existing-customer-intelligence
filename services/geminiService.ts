@@ -92,7 +92,8 @@ export const generateCompanyDigest = async (companyName: string): Promise<Digest
     `;
 
     try {
-        const result = await withRetry(() => ai.models.generateContent({
+        // FIX: Specify the generic type for withRetry to ensure 'result' is correctly typed as GenerateContentResponse.
+        const result = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -144,7 +145,8 @@ export const generateCompanyDigest = async (companyName: string): Promise<Digest
 export const generateCompanyFacts = async (companyName: string): Promise<string[]> => {
     const prompt = `Generate 3-4 interesting, little-known "Did you know?" style facts about ${companyName}. Each fact should be on a new line.`;
     try {
-        const result = await withRetry(() => ai.models.generateContent({
+        // FIX: Specify the generic type for withRetry to ensure 'result' is correctly typed as GenerateContentResponse.
+        const result = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
         }));
@@ -190,7 +192,8 @@ export const generateChatResponseFromData = async (question: string, data: unkno
     `;
 
     try {
-        const result = await withRetry(() => ai.models.generateContent({
+        // FIX: Specify the generic type for withRetry to ensure 'result' is correctly typed as GenerateContentResponse.
+        const result = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
         }));
