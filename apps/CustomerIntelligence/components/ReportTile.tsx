@@ -1,6 +1,6 @@
 import React from 'react';
 import type { DigestData } from '../../../types';
-import { BuildingIcon, DownloadIcon, EyeIcon, SpinnerIcon } from '../../../components/icons';
+import { BuildingIcon, DownloadIcon, EyeIcon, SpinnerIcon } from './icons';
 
 interface ReportTileProps {
     digest: DigestData;

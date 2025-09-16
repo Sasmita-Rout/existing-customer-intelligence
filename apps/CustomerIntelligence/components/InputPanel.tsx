@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SpinnerIcon } from '../../../components/icons';
+import { SpinnerIcon } from './icons';
 
 interface InputPanelProps {
     onGenerate: (company: string) => void;

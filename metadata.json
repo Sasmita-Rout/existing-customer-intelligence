@@ -1,5 +1,5 @@
 {
-  "name": "Accion Intelligence Operations",
+  "name": "Customer Intelligence",
   "description": "An AI-powered application to generate detailed customer intelligence reports. Features a dashboard of monthly reports with PDF viewing and download capabilities.",
   "requestFramePermissions": [],
   "prompt": ""

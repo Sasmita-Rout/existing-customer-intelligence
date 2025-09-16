@@ -1,10 +1,10 @@
 import React, { useState, useRef, useMemo, forwardRef } from 'react';
 import type { DigestData, OpenPosition } from '../../../types';
-import { BuildingIcon, DownloadIcon, SpinnerIcon, LinkIcon, ChartBarIcon, TrendingUpIcon, NewsIcon, UsersIcon, BriefcaseIcon, LightBulbIcon, TargetIcon } from '../../../components/icons';
+import { BuildingIcon, DownloadIcon, SpinnerIcon, LinkIcon, ChartBarIcon, TrendingUpIcon, NewsIcon, UsersIcon, BriefcaseIcon, LightBulbIcon, TargetIcon } from './icons';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { FinancialsTable } from '../../../components/FinancialsTable';
-import { SortableTable } from '../../../components/SortableTable';
+import { FinancialsTable } from './FinancialsTable';
+import { SortableTable } from './SortableTable';
 
 interface DigestCardProps {
     digest: DigestData;

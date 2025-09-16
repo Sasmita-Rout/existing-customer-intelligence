@@ -1,5 +1,5 @@
 import React from 'react';
-import { XMarkIcon } from '../../../components/icons';
+import { XMarkIcon } from './icons';
 
 interface PdfViewerModalProps {
     url: string;

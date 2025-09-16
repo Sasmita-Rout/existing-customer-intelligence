@@ -1,7 +1,7 @@
 import React from 'react';
 import { DigestCard } from './DigestCard';
 import type { DigestData } from '../../../types';
-import { BriefcaseIcon } from '../../../components/icons'; // A placeholder icon
+import { BriefcaseIcon } from './icons';
 
 interface DigestDisplayProps {
     digest: DigestData;

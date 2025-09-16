@@ -9,7 +9,7 @@ import { PdfViewerModal } from './components/PdfViewerModal';
 import { generateCompanyDigest, generateCompanyFacts } from '../../services/geminiService';
 import { getDigestsForCurrentMonth, saveDigest } from '../../services/storageService';
 import type { DigestData } from '../../types';
-import { SpinnerIcon } from '../../components/icons';
+import { SpinnerIcon } from './components/icons';
 
 export const CustomerIntelligenceApp: React.FC = () => {
     const [view, setView] = useState<'dashboard' | 'generating' | 'digest'>('dashboard');
